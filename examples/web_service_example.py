@@ -19,6 +19,7 @@
 import face_recognition
 import os
 from flask import Flask, jsonify, request, redirect
+import pickle
 
 # You can change this to any folder on your system
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -30,7 +31,10 @@ known_names=[]
 
 def loadFaceFile(fileName):
     al_image = face_recognition.load_image_file(fileName)
-    al_face_encoding = face_recognition.face_encodings(al_image)[0]
+    b=face_recognition.face_encodings(al_image)
+    if len(b)==0:
+        return [],[]
+    al_face_encoding = b[0]
     face_locations = face_recognition.face_locations(al_image)
     return al_face_encoding,face_locations
 
@@ -108,7 +112,7 @@ def detect_faces_in_image(file_stream):
     print(len(unknown_face_encodings[0]))
     if len(unknown_face_encodings) > 0:
         face_found = True
-        print(known_faces)
+        # print(known_faces)
         # See if the first face in the uploaded image matches the known face of Obama
         match_results = face_recognition.compare_faces(known_faces, unknown_face_encodings[0])
         print("检测结果")
@@ -117,6 +121,8 @@ def detect_faces_in_image(file_stream):
         for i in range(len(match_results)):
             if match_results[i]:
                 peName=known_names[i]
+                print(peName)
+                print(match_results[i])
         # if match_results[0]:
         #     is_obama = True
 
@@ -135,8 +141,27 @@ if __name__ == "__main__":
     for root, dirs, files in os.walk("./known", topdown=False):
         for name in files:
             filename=name[:-4]
-            known_faces.append(loadFaceFile("./known/"+name)[0])
-            known_names.append(filename)
+            # print(name[-4:])
+            
+            # exit(1)
+            if name[-4:]!=".jpg" and name[-4:]!=".png":
+                continue
+            if os.path.exists("./faces/"+name)==False:
+                a=loadFaceFile("./known/"+name)
+                with open("./faces/"+name,"wb") as f:
+                    pickle.dump(a[0],f)
+            # a=loadFaceFile("./known/"+name)
+            with open("./faces/"+name,"rb") as f:
+                b=pickle.load(f)
+                if len(b)==0:
+                    continue
+                known_faces.append(b)
+                known_names.append(filename)
+                # print(filename)
+            # if len(a[0])>=1:
+            #     known_faces.append(a[0])
+            #     known_names.append(filename)
+                # print(name)
     print(len(known_faces[0]))
     # for file in files:
     #     filename=file[:-4]
